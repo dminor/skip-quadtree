@@ -1,0 +1,2 @@
+An implementation of the Skip Quadtree data structure as described in the following paper:
+Eppstein, D., Goodrich, M. T., Sun, J. Z. (2008) The Skip Quadtree: A Simple Dynamic Data Structure for Multidimensional Data, Int. Journal on Computational Geometry and Applications, 18(1/2), pp. 131 - 160

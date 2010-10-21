@@ -137,29 +137,29 @@ int main(int argc, char **argv)
     //run queries
     for (int i = 0; i < q_count; ++i) { 
 
-        std::vector<SkipQuadtree<Point>::PointPriority<Point> > sqr = sqt.knn(5, queries[i]);  
+        std::vector<std::pair<Point *, double> > sqr = sqt.knn(5, queries[i]);  
         std::vector<Point *> lqr = sort_knn(pts, pt_count, 5, queries[i]);  
 
-        if (sqr.size() < 5) {
-            std::cout << "error: did not find 5 neighbouring points in skipquadtree" << std::endl;
-            continue;
-        }
-
         for (int j = 0; j < 5; ++j) {
-            double x = (*lqr[j])[0] - (*sqr[j].pt)[0]; 
-            double y = (*lqr[j])[1] - (*sqr[j].pt)[1];
+
+            if (sqr[j].first == 0) {
+                std::cout << "error: did not find 5 neighbouring points in tree" << std::endl;
+                return 1; 
+            }
+
+            double x = (*lqr[j])[0] - (*sqr[j].first)[0]; 
+            double y = (*lqr[j])[1] - (*sqr[j].first)[1];
 
             if ((x*x + y*y) > 0.0001) {
                 std::cout << "error: skipquadtree nearest neighbour does not match sort nearest neighbour" << std::endl;
 
                 std::cout << "query " << i << ": " << queries[i][0] << " " << queries[i][1] << std::endl;
-                double d1 = (queries[i][0]-(*sqr[j].pt)[0])*(queries[i][0]-(*sqr[j].pt)[0]) + (queries[i][1]-(*sqr[j].pt)[1])*(queries[i][1]-(*sqr[j].pt)[1]);
                 double d2 = (queries[i][0]-(*lqr[j])[0])*(queries[i][0]-(*lqr[j])[0]) + (queries[i][1]-(*lqr[j])[1])*(queries[i][1]-(*lqr[j])[1]);
                 std::cout << "result: " << j << std::endl;
-                std::cout << "sqr: " <<  (*sqr[j].pt)[0] << " " << (*sqr[j].pt)[1] << " " << d1 << std::endl;
-                std::cout << "lqr: " << (*lqr[j])[0] << " " << (*lqr[j])[1] << " " << d2 << std::endl;
+                std::cout << "sqr: " <<  (*sqr[j].first)[0] << " " << (*sqr[j].first)[1] << " " << sqr[j].second << std::endl;
+                std::cout << "lqr: " << (*lqr[j])[0] << " " << (*lqr[j])[1] << " " << sqrt(d2) << std::endl;
 
-                return 1;
+//                return 1;
             }
 
         } 

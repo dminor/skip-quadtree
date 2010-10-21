@@ -40,17 +40,17 @@ template<class Point> class SkipQuadtree {
         };
 
         //Keep track of point and priority for nearest neighbour search
-        template<class T> struct PointPriority {
+        template<class T> struct NodeDistance {
 
-            T *pt;
-            double priority;
+            Node<T> *node;
+            double distance;
 
-            PointPriority(T *pt, double priority) : pt(pt), priority(priority) {};
+            NodeDistance(Node<T> *node, double distance) : node(node), distance(distance) {};
 
             //min-heap
-            bool operator<(const PointPriority &other) const
+            bool operator<(const NodeDistance &other) const
             {
-                return priority > other.priority;
+                return distance > other.distance;
             }
         }; 
 
@@ -90,13 +90,88 @@ template<class Point> class SkipQuadtree {
         { 
         }
 
-        std::vector<PointPriority<Point> > knn(size_t k, const Point &pt) 
+        std::vector<std::pair<Point *, double> > knn(size_t k, const Point &pt) 
         {
-            std::vector<PointPriority<Point> > pq; 
-            knn_search(pq, root, k, pt);
-            std::sort_heap(pq.begin(), pq.end());
-            std::reverse(pq.begin(), pq.end());
-            return pq;
+            //setup query result vector
+            std::vector<std::pair<Point *, double> > qr; 
+            qr.reserve(k);
+            for (size_t i = 0; i < k; ++i) {
+                qr[i].first = 0;
+                qr[i].second = std::numeric_limits<double>::max();
+            }
+ 
+            //initialize priority queue for search
+            std::vector<NodeDistance<Point> > pq; 
+            pq.push_back(NodeDistance<Point>(root, 0.0));
+
+            while (!pq.empty()) {
+
+                std::pop_heap(pq.begin(), pq.end());
+                Node<Point> *node = pq.back().node;
+                double node_dist = pq.back().distance; 
+                pq.pop_back();
+
+                if (node->nodes == 0) {
+
+                    //calculate distance from query point to this point
+                    double dist = 0.0; 
+                    for (size_t d = 0; d < dim; ++d) {
+                        dist += (node->pt[d]-pt[d]) * (node->pt[d]-pt[d]); 
+                    }
+                    dist = sqrt(dist);
+
+                    //insert point in proper order, for small k this will be fast enough
+                    for (size_t i = 0; i < k; ++i) {
+                        if (qr[i].second > dist) {
+                            for (size_t j = k - 1; j > i; --j) {
+                                qr[j] = qr[j - 1];
+                            }
+                            qr[i].first = &node->pt;
+                            qr[i].second = dist;
+                            break; 
+                        }
+                    } 
+                } else {
+
+                    //find k-th distance
+                    double kth_dist = qr[k - 1].second; 
+
+                    //no longer relevant
+                    if (kth_dist <= node_dist) continue;
+
+                    for (size_t n = 0; n < nnodes; ++n) { 
+                        //calculate distance to each of the non-zero children
+                        //if less than k-th distance, then visit 
+                        if (node->nodes[n]) {
+
+                            //find distance to each side of square 
+                            double min_dist = std::numeric_limits<double>::max();
+                            for (size_t d = 0; d < dim; ++d) { 
+                          
+                                //figure out which side of the midpoint we are on 
+                                //and calculate distance
+                                double dist, dist2;
+                                if (pt[d] < node->nodes[n]->mid[d]) {
+                                    dist = node->nodes[n]->mid[d] - node->nodes[n]->side[d] - pt[d];
+                                } else {
+                                    dist2 = pt[d] - node->nodes[n]->mid[d] + node->nodes[n]->side[d];
+                                }
+
+                                if (dist < min_dist) min_dist = dist; 
+                                if (dist2 < min_dist) min_dist = dist2; 
+                            } 
+
+                            //if closer than k-th distance, search
+                            if (min_dist < kth_dist) { 
+                                pq.push_back(NodeDistance<Point>(node->nodes[n], min_dist));
+                                std::push_heap(pq.begin(), pq.end()); 
+                            }
+                        } 
+                    }
+                }
+            } 
+
+            return qr;
         }
 
         Node<Point> *root;
@@ -176,77 +251,7 @@ template<class Point> class SkipQuadtree {
             } 
 
             return node;
-        }
-
-        void knn_search(std::vector<PointPriority<Point> > &pq, Node<Point> *node, size_t k, const Point &pt)
-        { 
-            if (node->nodes == 0) {
-                double d = 0.0; 
-                for (int i = 0; i < dim; ++i) {
-                    d += (node->pt[i]-pt[i]) * (node->pt[i]-pt[i]); 
-                } 
-                pq.push_back(PointPriority<Point>(&node->pt, sqrt(d)));
-                std::push_heap(pq.begin(), pq.end()); 
-            } else {
-
-                //determine node index based upon which which side of midpoint for each dimension
-                size_t n_index = 0;
-                for (size_t d = 0; d < dim; ++d) {
-                    if (pt[d] > node->mid[d]) n_index += 1 << d; 
-                } 
-
-                //search for node containing point
-                if (node->nodes[n_index]) knn_search(pq, node->nodes[n_index], k, pt);
-
-                //find k-th priority (FIXME: more efficient?) 
-                size_t kth_index = 0;
-                double kth_dist = 0.0;
-                for (int i = 0; i < pq.size() && i < k; ++i) {
-                    if (pq[i].priority > kth_dist){
-                        kth_dist = pq[i].priority; 
-                        kth_index = i;
-                    }
-                }
-
-                for (size_t n = 0; n < nnodes; ++n) { 
-                    //calculate distance to each of the other non-zero nodes
-                    //if less than priority, then visit 
-                    //update priority, and check next node
-                    if (node->nodes[n] && n != n_index) {
-
-                        //find distance to each side of square 
-                        for (size_t d = 0; d < dim; ++d) { 
-                      
-                            //figure out which side of the midpoint are we on 
-                            //and calculate distance
-                            double dist;
-                            if ((*pq[kth_index].pt)[d] < node->nodes[n]->mid[d]) {
-                                dist = node->nodes[n]->mid[d] - node->nodes[n]->side[d] - (*pq[kth_index].pt)[d];
-                            } else {
-                                dist = (*pq[kth_index].pt)[d] - node->nodes[n]->mid[d] + node->nodes[n]->side[d];
-                            } 
-
-                            //if closer than k-th distance, search
-                            if (dist < kth_dist) {
-                                knn_search(pq, node->nodes[n], k, pt);
-
-                                //then need to update priority
-                                for (int i = 0; i < pq.size() && i < k; ++i) {
-                                    if (pq[i].priority > kth_dist){
-                                        kth_dist = pq[i].priority; 
-                                        kth_index = i;
-                                    }
-                                } 
-                                break;
-                            }
-                        }
-
-                    } 
-
-                }
-            }
         } 
-
 };
 
 #endif
