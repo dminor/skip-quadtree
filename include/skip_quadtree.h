@@ -23,9 +23,19 @@ THE SOFTWARE.
 #ifndef SKIP_QUADTREE_H_
 #define SKIP_QUADTREE_H_
 
-#include <iostream>
+/*
+    Skip Quadtree implementation supporting approximate nearest neighbour
+    queries, based upon the description in:  
+    
+    Eppstein, D., Goodrich, M. T., Sun, J. Z. (2005) The Skip Quadtree: A Simple Dynamic Data Structure for Multidimensional Data, Proc. 21st ACM Symposium on Computational Geometry, pp. 296 -- 305, ACM, New York, NY
+*/
+
+#include <algorithm>
+#include <cmath>
 #include <limits>
 #include <vector>
+
+#include <iostream>
 
 template<class Point> class SkipQuadtree {
 
@@ -33,6 +43,8 @@ template<class Point> class SkipQuadtree {
 
         //Nodes of the quadtree
         template<class T> struct Node { 
+            Node *above;    //pointer to same node in n+1 level of skip structure 
+            Node *below;    //pointer to same node in n-1 level of skip structure 
             Node **nodes;   //children
             T mid;          //midpoint
             T side;         //half side length
@@ -84,13 +96,15 @@ template<class Point> class SkipQuadtree {
             }
  
             root = worker(mid, side, pts_vector);
+            levels.push_back(root);
+            build_skiphierarchy(root);
         }
 
         virtual ~SkipQuadtree()
         { 
         }
 
-        std::vector<std::pair<Point *, double> > knn(size_t k, const Point &pt) 
+        std::vector<std::pair<Point *, double> > knn(size_t k, const Point &pt, double eps) 
         {
             //setup query result vector
             std::vector<std::pair<Point *, double> > qr; 
@@ -136,8 +150,8 @@ template<class Point> class SkipQuadtree {
                     //find k-th distance
                     double kth_dist = qr[k - 1].second; 
 
-                    //no longer relevant
-                    if (kth_dist <= node_dist) continue;
+                    //stop searching, all further nodes farther away than k-th value
+                    if (kth_dist <= (1.0 + eps)*node_dist) break;
 
                     for (size_t n = 0; n < nnodes; ++n) { 
                         //calculate distance to each of the non-zero children
@@ -150,15 +164,11 @@ template<class Point> class SkipQuadtree {
                           
                                 //figure out which side of the midpoint we are on 
                                 //and calculate distance
-                                double dist, dist2;
-                                if (pt[d] < node->nodes[n]->mid[d]) {
-                                    dist = node->nodes[n]->mid[d] - node->nodes[n]->side[d] - pt[d];
-                                } else {
-                                    dist2 = pt[d] - node->nodes[n]->mid[d] + node->nodes[n]->side[d];
-                                }
-
+                                double dist;
+                                dist = node->nodes[n]->mid[d] - node->nodes[n]->side[d] - pt[d];
                                 if (dist < min_dist) min_dist = dist; 
-                                if (dist2 < min_dist) min_dist = dist2; 
+                                dist = pt[d] - node->nodes[n]->mid[d] + node->nodes[n]->side[d];
+                                if (dist < min_dist) min_dist = dist; 
                             } 
 
                             //if closer than k-th distance, search
@@ -175,6 +185,7 @@ template<class Point> class SkipQuadtree {
         }
 
         Node<Point> *root;
+        std::vector<Node<Point> *> levels;
 
     private:
 
@@ -184,6 +195,8 @@ template<class Point> class SkipQuadtree {
         Node<Point> *worker(const Point &mid, const Point &side, std::vector<Point *> &pts)
         {
             Node<Point> *node = new Node<Point>; 
+            node->below = node->above = 0;
+
             for (size_t d = 0; d < dim; ++d) {
                 node->mid[d] = mid[d];
                 node->side[d] = side[d]; 
@@ -213,6 +226,7 @@ template<class Point> class SkipQuadtree {
 
                 //create new nodes recursively
                 size_t ninteresting = 0;
+                Node<Point> *last_interesting = 0;
                 for (size_t n = 0; n < nnodes; ++n) {
 
                     if (node_pts[n].size()) {
@@ -230,6 +244,7 @@ template<class Point> class SkipQuadtree {
 
                         ++ninteresting;
                         node->nodes[n] = worker(new_mid, new_side, node_pts[n]);
+                        last_interesting = node->nodes[n];
                     } else {
                         node->nodes[n] = 0; 
                     }
@@ -239,19 +254,127 @@ template<class Point> class SkipQuadtree {
 
                 //compress if less than 2 interesting nodes
                 if (ninteresting < 2) {
-                    for (size_t n = 0; n < nnodes; ++n) {
-                        if (node->nodes[n]) {
-                            Node<Point> *temp = node;
-                            node = node->nodes[n];
-                            delete temp;
-                            break;
-                        }
-                    }
+                    delete node;
+                    node = last_interesting; 
                 }
             } 
 
             return node;
+        }
+
+    void build_skiphierarchy(Node<Point> *below)
+    { 
+        //recursively build skip hierarchy until we get an empty level
+        //should be O(log(n)) levels w.h.p.
+        size_t level_count = 0;
+        Node<Point> *level = below;
+        while (level) {
+ 
+            level = build_skiplevel(level); 
+
+            if (level) {
+                //store level and continue
+                levels.push_back(level);
+                ++level_count;
+
+                if (level_count > 50) break; //FIXME: hard coded limit
+            } else {
+                //we're done
+                break;
+            }
         } 
+    }
+
+    Node<Point> *build_skiplevel(Node<Point> *node)
+    { 
+        Node<Point> *copy = 0; 
+        size_t ninteresting = 0;
+        Node<Point> *last_interesting = 0;
+
+        //hit a leaf -- nothing to do
+        if (!node->nodes) return 0;
+
+        //search through children for leaf nodes
+        //we work at the branch node level so as to avoid creating nodes without children
+        //and then deleting them
+        for (size_t n = 0; n < nnodes; ++n) { 
+            if (node->nodes[n]) {
+
+                //hit a leaf node
+                if (node->nodes[n]->nodes == 0) {
+                    //decide with p=0.5 whether or not to keep the node
+                    if ((double)rand() / (double)RAND_MAX < 0.5) { 
+
+                        //if so, and we haven't made a copy yet, do so
+                        if (!copy) copy = make_branchnode(node);
+
+                        //create copy of existing point at proper location
+                        copy->nodes[n] = new Node<Point>;
+                        copy->nodes[n]->nodes = 0;
+
+                        //link nodes for skip hierarchy
+                        node->nodes[n]->above = copy->nodes[n]; 
+                        copy->below = node->nodes[n];
+                        copy->above = 0;
+
+                        //copy point in
+                        for (size_t d = 0; d < dim; ++d) {
+                            copy->nodes[n]->pt[d] = node->nodes[n]->pt[d];
+                            copy->nodes[n]->mid[d] = node->nodes[n]->mid[d];
+                            copy->nodes[n]->side[d] = node->nodes[n]->side[d]; 
+                        }
+                        
+                        last_interesting = copy->nodes[n];
+                        ++ninteresting;
+                    }
+                } else {
+                    //build level recursively
+                    Node<Point> *child = build_skiplevel(node->nodes[n]);
+
+                    //found a valid child, make copy if necessary and set pointer
+                    if (child) {
+                        if (!copy) copy = make_branchnode(node);
+                        copy->nodes[n] = child;
+                        last_interesting = copy->nodes[n];
+                        ++ninteresting;
+                    } 
+                }
+            }
+        }
+
+        //compress if less than 2 interesting nodes
+        if (copy && ninteresting < 2) {
+            copy->below->above = last_interesting; 
+            delete copy;
+            copy = last_interesting; 
+        }
+    
+        return copy;
+    } 
+
+    //make a new branch node and set pointers for skip hierarchy 
+    Node<Point> *make_branchnode(Node<Point> *node)
+    { 
+        //make new branch node and zero out pointers
+        Node<Point> *copy = new Node<Point>;
+        copy->nodes = new Node<Point> *[nnodes];
+        for (size_t n = 0; n < nnodes; ++n) {
+            copy->nodes[n] = 0;
+        } 
+
+        //copy mid, side 
+        for (size_t d = 0; d < dim; ++d) {
+            copy->mid[d] = node->mid[d];
+            copy->side[d] = node->side[d]; 
+        }
+
+        //link nodes for skip hierarchy
+        node->above = copy;
+        copy->below = node;
+        copy->above = 0;
+
+        return copy; 
+    } 
 };
 
 #endif

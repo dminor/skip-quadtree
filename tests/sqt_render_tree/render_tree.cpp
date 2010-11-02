@@ -25,6 +25,7 @@ THE SOFTWARE.
 #include <float.h>
 #include <cstdio>
 #include <cstdlib>
+#include <iostream>
 
 typedef double Point[2];
 
@@ -97,7 +98,16 @@ int main(int argc, char **argv)
         exit(1); 
     }
 
-    fprintf(f, "%\n");
+    fprintf(f, "%%%%!PS-Adobe-2.0\n");
+    fprintf(f, "%%%%Pages: %d\n", sqt.levels.size()); 
+    fprintf(f, "/page-begin {\n");
+    fprintf(f, "gsave\n");
+    fprintf(f, "} def\n");
+
+    fprintf(f, "/page-end {\n");
+    fprintf(f, "   grestore\n");
+    fprintf(f, "   showpage\n");
+    fprintf(f, "} def\n");
 
     //define point function for later
     fprintf(f, "/draw-point {\n");
@@ -135,9 +145,12 @@ int main(int argc, char **argv)
     fprintf(f, "    grestore\n");
     fprintf(f, "} def\n");
 
-    fprintf(f, "60 240 translate\n");
-
-    render_tree(f, sqt.root, 0);
+    for (size_t i = 0; i < sqt.levels.size(); ++i) {
+        fprintf(f, "%%%%Page: %d\n", i + 1);
+        fprintf(f, "page-begin\n"); 
+        render_tree(f, sqt.levels[i], 0); 
+        fprintf(f, "page-end\n");
+    }
 
     fclose(f);
 
