@@ -27,8 +27,8 @@ THE SOFTWARE.
 #include <algorithm>
 #include <fstream>
 #include <iostream>
-
-#include "compressed_quadtree.h"
+#include <limits>
+#include <vector>
 
 struct Point {
     double coords[2];
@@ -45,10 +45,55 @@ struct Point {
     double &operator[](size_t idx) {return coords[idx];}
 };
 
+bool qr_lt(const std::pair<Point *, double> &pt1, const std::pair<Point *, double> &pt2)
+{ 
+    return pt1.second < pt2.second;
+} 
+
+double pt_dist(const Point pt, const Point pt1)
+{ 
+    return (pt1[0]-pt[0])*(pt1[0]-pt[0])+(pt1[1]-pt[1])*(pt1[1]-pt[1]);
+}
+
+//
+// Return k nearest neighbours by linearly scanning input
+//
+std::vector<std::pair<Point *, double> > scan_knn(Point *pts, size_t pt_count, size_t k, Point pt)
+{
+    std::vector<std::pair<Point *, double> > qr;
+
+    double kth_dist = std::numeric_limits<double>::min();
+    for (size_t i = 0; i < pt_count; ++i) {
+        double d = pt_dist(pt, pts[i]);
+
+        if (qr.size() < k) {
+            qr.push_back(std::pair<Point *, double>(&pts[i], d));
+            if (d > kth_dist) kth_dist = d;
+        } else {
+            if (d < kth_dist) {
+                double new_kth_dist = std::numeric_limits<double>::min();
+                for (size_t j = 0; j < k; ++j) {
+                    if (qr[j].second == kth_dist) {
+                        qr[j].first = &pts[i];
+                        qr[j].second = d;
+                    }
+
+                    if (qr[j].second > new_kth_dist) new_kth_dist = qr[j].second;
+                }
+            }
+        }
+    }
+
+    //sort query results
+    std::sort(qr.begin(), qr.end(), qr_lt);
+
+    return qr;
+}
+
 int main(int argc, char **argv)
 { 
-    if (argc < 3) {
-        std::cout << "usage: knn <pts> <queries> [epsilon]" << std::endl;
+    if (argc != 3) {
+        std::cout << "usage: knn <pts> <queries>" << std::endl;
         exit(1);
     }
 
@@ -58,7 +103,7 @@ int main(int argc, char **argv)
     std::ifstream ptf(argv[1]);
 
     if (!ptf) {
-        std::cout << "usage: knn <pts> <queries> [epsilon]" << std::endl;
+        std::cout << "error: could not open points file: " << argv[1] << std::endl;
         exit(1); 
     }
 
@@ -107,17 +152,10 @@ int main(int argc, char **argv)
 
     qf.close();
 
-    //read query epsilon
-    double epsilon = 0.0;
-    if (argc == 4) epsilon = atof(argv[3]);
-
-    //build compressed quadtree
-    CompressedQuadtree<Point> cqt(2, pts, pt_count);
-
     //run queries
     for (int i = 0; i < q_count; ++i) { 
 
-        std::vector<std::pair<Point *, double> > qr = cqt.knn(5, queries[i], epsilon);  
+        std::vector<std::pair<Point *, double> > qr = scan_knn(pts, pt_count, 5, queries[i]);  
         std::cout << "query " << i << ": (" << queries[i][0] << ", " << queries[i][1] << ")" << std::endl;
 
         for (int j = 0; j < 5; ++j) { 

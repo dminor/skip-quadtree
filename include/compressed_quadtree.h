@@ -43,7 +43,7 @@ template<class Point> class CompressedQuadtree {
             Node **nodes;   //children
             T mid;          //midpoint
             T side;         //half side length
-            T pt;           //point, if data stored
+            T *pt;           //point, if data stored
         };
 
         //Keep track of point and priority for nearest neighbour search
@@ -103,8 +103,7 @@ template<class Point> class CompressedQuadtree {
             std::vector<std::pair<Point *, double> > qr; 
             qr.reserve(k);
             for (size_t i = 0; i < k; ++i) {
-                qr[i].first = 0;
-                qr[i].second = std::numeric_limits<double>::max();
+                qr.push_back(std::make_pair<Point *, double>(0, std::numeric_limits<double>::max()));
             }
  
             //initialize priority queue for search
@@ -123,9 +122,8 @@ template<class Point> class CompressedQuadtree {
                     //calculate distance from query point to this point
                     double dist = 0.0; 
                     for (size_t d = 0; d < dim; ++d) {
-                        dist += (node->pt[d]-pt[d]) * (node->pt[d]-pt[d]); 
+                        dist += ((*node->pt)[d]-pt[d]) * ((*node->pt)[d]-pt[d]); 
                     }
-                    dist = sqrt(dist);
 
                     //insert point in proper order, for small k this will be fast enough
                     for (size_t i = 0; i < k; ++i) {
@@ -133,7 +131,7 @@ template<class Point> class CompressedQuadtree {
                             for (size_t j = k - 1; j > i; --j) {
                                 qr[j] = qr[j - 1];
                             }
-                            qr[i].first = &node->pt;
+                            qr[i].first = node->pt;
                             qr[i].second = dist;
                             break; 
                         }
@@ -144,7 +142,9 @@ template<class Point> class CompressedQuadtree {
                     double kth_dist = qr[k - 1].second; 
 
                     //stop searching, all further nodes farther away than k-th value
-                    if (kth_dist <= (1.0 + eps)*node_dist) break;
+                    if ((1.0 + eps)*kth_dist <= node_dist) {
+                        break;
+                    }
 
                     for (size_t n = 0; n < nnodes; ++n) { 
                         //calculate distance to each of the non-zero children
@@ -158,11 +158,15 @@ template<class Point> class CompressedQuadtree {
                                 //figure out which side of the midpoint we are on 
                                 //and calculate distance
                                 double dist;
-                                dist = node->nodes[n]->mid[d] - node->nodes[n]->side[d] - pt[d];
+                                dist = fabs(node->nodes[n]->mid[d] - node->nodes[n]->side[d] - pt[d]);
                                 if (dist < min_dist) min_dist = dist; 
-                                dist = pt[d] - node->nodes[n]->mid[d] + node->nodes[n]->side[d];
+
+                                dist = fabs(pt[d] - node->nodes[n]->mid[d] + node->nodes[n]->side[d]);
                                 if (dist < min_dist) min_dist = dist; 
                             } 
+
+                            // we're using squared distances elsewhere
+                            min_dist *= min_dist;
 
                             //if closer than k-th distance, search
                             if (min_dist < kth_dist) { 
@@ -194,9 +198,7 @@ template<class Point> class CompressedQuadtree {
 
             if (pts.size() == 1) {
                 node->nodes = 0;
-                for (size_t d = 0; d < dim; ++d) {
-                    node->pt[d] = (*pts[0])[d];
-                }
+                node->pt = pts[0];
             } else { 
 
                 node->nodes = new Node<Point> *[nnodes];

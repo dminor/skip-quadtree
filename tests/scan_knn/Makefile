@@ -4,7 +4,7 @@ LIBS =
 CFLAGS = -g
 LDFLAGS = -L../../bin 
 OBJS = knn.o
-TARGET = ../../bin/cqt_knn
+TARGET = ../../bin/scan-knn
 
 all: $(OBJS)
 	g++ $(LDFLAGS) $(LIBS) $(OBJS) -o $(TARGET) 
@@ -12,7 +12,7 @@ all: $(OBJS)
 .cpp.o:
 	g++ $(INCS) $(CFLAGS) -c $< -o $@
 
-knn.o: ../../include/compressed_quadtree.h
+knn.o: ../../include/skip_quadtree.h
 
 clean:
 	rm *.o $(TARGET) 
