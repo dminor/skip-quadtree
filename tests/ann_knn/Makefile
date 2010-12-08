@@ -1,10 +1,10 @@
 
-INCS = -I../../include 
-LIBS = 
+INCS = -I
+LIBS = -lann
 CFLAGS = -g
-LDFLAGS = -L../../bin 
+LDFLAGS = -g
 OBJS = knn.o
-TARGET = ../../bin/scan-knn
+TARGET = ../../bin/ann-knn
 
 all: $(OBJS)
 	g++ $(LDFLAGS) $(LIBS) $(OBJS) -o $(TARGET) 

@@ -80,6 +80,8 @@ std::vector<std::pair<Point *, double> > scan_knn(Point *pts, size_t pt_count, s
 
                     if (qr[j].second > new_kth_dist) new_kth_dist = qr[j].second;
                 }
+
+                kth_dist = new_kth_dist;
             }
         }
     }
@@ -159,7 +161,7 @@ int main(int argc, char **argv)
         std::cout << "query " << i << ": (" << queries[i][0] << ", " << queries[i][1] << ")" << std::endl;
 
         for (int j = 0; j < 5; ++j) { 
-            std::cout << "(" << (*qr[j].first)[0] << ", " << (*qr[j].first)[1] << ") " << sqrt(qr[j].second) << std::endl; 
+            std::cout << "(" << (*qr[j].first)[0] << ", " << (*qr[j].first)[1] << ") " << qr[j].second << std::endl; 
         } 
     }
 

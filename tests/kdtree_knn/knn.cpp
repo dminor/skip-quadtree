@@ -20,7 +20,6 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE.
 */
 
-#include <cmath>
 #include <cstdio>
 #include <cstdlib>
 
@@ -28,7 +27,7 @@ THE SOFTWARE.
 #include <fstream>
 #include <iostream>
 
-#include "skip_quadtree.h"
+#include "kdtree.h"
 
 struct Point {
     double coords[2];
@@ -44,7 +43,6 @@ struct Point {
     double operator[](size_t idx) const {return coords[idx];}
     double &operator[](size_t idx) {return coords[idx];}
 };
-
 
 int main(int argc, char **argv)
 { 
@@ -79,6 +77,12 @@ int main(int argc, char **argv)
     }
 
     ptf.close();
+    
+    //make a copy of points file for sort knn
+    Point *pts2 = new Point[pt_count];
+    for (int i = 0; i < pt_count; ++i) {
+        pts2[i] = pts[i];
+    }
 
     //read queries
     int q_count;
@@ -101,6 +105,7 @@ int main(int argc, char **argv)
 
     for (int i = 0; i < q_count; ++i) {
         char c;
+
         qf >> queries[i][0];
         qf >> c;
         qf >> queries[i][1];
@@ -112,12 +117,12 @@ int main(int argc, char **argv)
     double epsilon = 0.0;
     if (argc == 4) epsilon = atof(argv[3]);
 
-    //build skip quadtree
-    SkipQuadtree<Point> sqt(2, pts, pt_count);
+    KdTree<Point> kt(2, pts, pt_count);
 
     //run queries
     for (int i = 0; i < q_count; ++i) { 
-        std::vector<std::pair<Point *, double> > qr = sqt.knn(5, queries[i], epsilon);  
+
+        std::vector<std::pair<Point *, double> > qr = kt.knn(5, queries[i], epsilon);  
         std::cout << "query " << i << ": (" << queries[i][0] << ", " << queries[i][1] << ")" << std::endl;
 
         for (int j = 0; j < 5; ++j) { 

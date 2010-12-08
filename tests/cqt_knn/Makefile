@@ -4,7 +4,7 @@ LIBS =
 CFLAGS = -g
 LDFLAGS = -L../../bin 
 OBJS = knn.o
-TARGET = ../../bin/cqt_knn
+TARGET = ../../bin/cqt-knn
 
 all: $(OBJS)
 	g++ $(LDFLAGS) $(LIBS) $(OBJS) -o $(TARGET) 

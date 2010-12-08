@@ -20,7 +20,6 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE.
 */
 
-#include <cmath>
 #include <cstdio>
 #include <cstdlib>
 
@@ -28,23 +27,7 @@ THE SOFTWARE.
 #include <fstream>
 #include <iostream>
 
-#include "skip_quadtree.h"
-
-struct Point {
-    double coords[2];
-
-    Point() {};
-
-    Point(const Point &other)
-    {
-        coords[0] = other.coords[0];
-        coords[1] = other.coords[1]; 
-    }
-
-    double operator[](size_t idx) const {return coords[idx];}
-    double &operator[](size_t idx) {return coords[idx];}
-};
-
+#include <ANN/ANN.h>
 
 int main(int argc, char **argv)
 { 
@@ -70,16 +53,18 @@ int main(int argc, char **argv)
         exit(1);
     }
 
-    Point *pts = new Point[pt_count]; 
+    ANNpointArray pts = annAllocPts(pt_count, 2); 
     for (int i = 0; i < pt_count; ++i) { 
+        double d;
         char c;
-        ptf >> (pts[i][0]);
+
+        ptf >> d; pts[i][0] = d;
         ptf >> c;
-        ptf >> (pts[i][1]);
+        ptf >> d; pts[i][1] = d;
     }
 
     ptf.close();
-
+    
     //read queries
     int q_count;
 
@@ -97,13 +82,15 @@ int main(int argc, char **argv)
         exit(1);
     }
 
-    Point *queries = new Point[q_count]; 
+    ANNpointArray queries = annAllocPts(q_count, 2);
 
     for (int i = 0; i < q_count; ++i) {
+        double d;
         char c;
-        qf >> queries[i][0];
-        qf >> c;
-        qf >> queries[i][1];
+
+        ptf >> d; queries[i][0] = d;
+        ptf >> c;
+        ptf >> d; queries[i][1] = d;
     }
 
     qf.close();
@@ -112,23 +99,28 @@ int main(int argc, char **argv)
     double epsilon = 0.0;
     if (argc == 4) epsilon = atof(argv[3]);
 
-    //build skip quadtree
-    SkipQuadtree<Point> sqt(2, pts, pt_count);
+    ANNkd_tree kt(pts, pt_count, 2);
 
     //run queries
+    ANNidx *nn_idx = new ANNidx[5];
+    ANNdist *dists = new ANNdist[5];
+
     for (int i = 0; i < q_count; ++i) { 
-        std::vector<std::pair<Point *, double> > qr = sqt.knn(5, queries[i], epsilon);  
+
+        kt.annkSearch(queries[i], 5, nn_idx, dists, epsilon);
+
         std::cout << "query " << i << ": (" << queries[i][0] << ", " << queries[i][1] << ")" << std::endl;
 
         for (int j = 0; j < 5; ++j) { 
-            std::cout << "(" << (*qr[j].first)[0] << ", " << (*qr[j].first)[1] << ") " << qr[j].second << std::endl; 
+            std::cout << "(" << pts[nn_idx[j]][0] << ", " << pts[nn_idx[j]][1] << ") " << dists[j] << std::endl; 
         } 
     }
 
     std::cout << "done." << std::endl;
 
-    delete[] pts;
-    delete[] queries; 
+    delete[] nn_idx;
+    delete[] dists;
+    annClose();
 
     return 0;
 }
