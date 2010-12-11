@@ -45,12 +45,20 @@ void render_tree(FILE *f, struct CompressedQuadtree<Point>::Node<Point> *tree, s
     fprintf(f, "%.0f %.0f %.0f %.0f node-bounds\n", x1, x2, y1, y2); 
 
     if (!tree->nodes) {
-        fprintf(f, "%.0f %.0f draw-point\n", tree->pt[0], tree->pt[1]);
+        fprintf(f, "%.0f %.0f draw-point\n", (*tree->pt)[0], (*tree->pt)[1]);
     } else { 
         for (int i = 0; i < 4; ++i) {
             if (tree->nodes[i]) render_tree(f, tree->nodes[i], depth+1);
         } 
     }
+
+    /*
+    if (depth == 2 && (double)rand()/(double)RAND_MAX < 0.2) { 
+        for (size_t i = 0; i < 4; ++i) {
+            if (tree->ancestors[i]) fprintf(f, "%.0f %.0f %.0f %.0f draw-line\n", tree->mid[0], tree->mid[1], tree->ancestors[i]->mid[0], tree->ancestors[i]->mid[1]); 
+        } 
+    }
+    */
 }
 
 int main(int argc, char **argv)
@@ -116,6 +124,24 @@ int main(int argc, char **argv)
     fprintf(f, "    stroke\n");
     fprintf(f, "    grestore\n");
     fprintf(f, "} def\n");
+
+    //node bounding box
+    fprintf(f, "/draw-line {\n");
+    fprintf(f, "    /y2 exch def\n");
+    fprintf(f, "    /x2 exch def\n");
+    fprintf(f, "    /y1 exch def\n");
+    fprintf(f, "    /x1 exch def\n");
+    fprintf(f, "    gsave\n");
+    fprintf(f, "    0.7 0.1 0.1 setrgbcolor\n");
+    fprintf(f, "    newpath\n");
+    fprintf(f, "    x1 y1 moveto\n");
+    fprintf(f, "    x2 y2 lineto\n");
+    fprintf(f, "    closepath\n");
+    fprintf(f, "    stroke \n");
+    fprintf(f, "    grestore\n");
+    fprintf(f, "} def\n");
+
+
 
     //node bounding box
     fprintf(f, "/node-bounds {\n");

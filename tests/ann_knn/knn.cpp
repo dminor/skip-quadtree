@@ -60,7 +60,7 @@ int main(int argc, char **argv)
 
         ptf >> d; pts[i][0] = d;
         ptf >> c;
-        ptf >> d; pts[i][1] = d;
+        ptf >> d; pts[i][1] = d; 
     }
 
     ptf.close();
@@ -88,9 +88,9 @@ int main(int argc, char **argv)
         double d;
         char c;
 
-        ptf >> d; queries[i][0] = d;
-        ptf >> c;
-        ptf >> d; queries[i][1] = d;
+        qf >> d; queries[i][0] = d;
+        qf >> c;
+        qf >> d; queries[i][1] = d;
     }
 
     qf.close();

@@ -30,9 +30,11 @@ THE SOFTWARE.
     Eppstein, D., Goodrich, M. T., Sun, J. Z. (2005) The Skip Quadtree: A Simple Dynamic Data Structure for Multidimensional Data, Proc. 21st ACM Symposium on Computational Geometry, pp. 296 -- 305, ACM, New York, NY
 */
 
-
+#include <algorithm>
 #include <limits>
 #include <vector>
+#include <iostream>
+#include <cstring>
 
 template<class Point> class CompressedQuadtree {
 
@@ -41,6 +43,7 @@ template<class Point> class CompressedQuadtree {
         //Nodes of the quadtree
         template<class T> struct Node { 
             Node **nodes;   //children
+//            Node **ancestors;
             T mid;          //midpoint
             T side;         //half side length
             T *pt;           //point, if data stored
@@ -89,8 +92,12 @@ template<class Point> class CompressedQuadtree {
             for (size_t i = 0; i < n; ++i) {
                 pts_vector.push_back(&pts[i]);
             }
- 
+
             root = worker(mid, side, pts_vector);
+//            Node<Point> **ancestors = new Node<Point> *[2*dim]; 
+//            memset(ancestors, 0, 2*dim*sizeof(Node<Point> *));
+//            assign_ancestors(root, ancestors);
+//            delete[] ancestors;
         }
 
         virtual ~CompressedQuadtree()
@@ -110,12 +117,16 @@ template<class Point> class CompressedQuadtree {
             std::vector<NodeDistance<Point> > pq; 
             pq.push_back(NodeDistance<Point>(root, 0.0));
 
+            size_t nvisited = 0;
+
             while (!pq.empty()) {
 
                 std::pop_heap(pq.begin(), pq.end());
                 Node<Point> *node = pq.back().node;
                 double node_dist = pq.back().distance; 
                 pq.pop_back();
+
+                ++nvisited;
 
                 if (node->nodes == 0) {
 
@@ -142,7 +153,7 @@ template<class Point> class CompressedQuadtree {
                     double kth_dist = qr[k - 1].second; 
 
                     //stop searching, all further nodes farther away than k-th value
-                    if ((1.0 + eps)*kth_dist <= node_dist) {
+                    if (kth_dist <= (1.0 + eps)*node_dist) {
                         break;
                     }
 
@@ -151,22 +162,7 @@ template<class Point> class CompressedQuadtree {
                         //if less than k-th distance, then visit 
                         if (node->nodes[n]) {
 
-                            //find distance to each side of square 
-                            double min_dist = std::numeric_limits<double>::max();
-                            for (size_t d = 0; d < dim; ++d) { 
-                          
-                                //figure out which side of the midpoint we are on 
-                                //and calculate distance
-                                double dist;
-                                dist = fabs(node->nodes[n]->mid[d] - node->nodes[n]->side[d] - pt[d]);
-                                if (dist < min_dist) min_dist = dist; 
-
-                                dist = fabs(pt[d] - node->nodes[n]->mid[d] + node->nodes[n]->side[d]);
-                                if (dist < min_dist) min_dist = dist; 
-                            } 
-
-                            // we're using squared distances elsewhere
-                            min_dist *= min_dist;
+                            double min_dist = min_pt_dist_to_node(pt, node->nodes[n]);
 
                             //if closer than k-th distance, search
                             if (min_dist < kth_dist) { 
@@ -177,6 +173,8 @@ template<class Point> class CompressedQuadtree {
                     }
                 }
             } 
+
+            std::cout << "#visited: " << nvisited << std::endl;
 
             return qr;
         }
@@ -257,6 +255,64 @@ template<class Point> class CompressedQuadtree {
 
             return node;
         } 
+
+        double min_pt_dist_to_node(const Point &pt, Node<Point> *node)
+        {
+            bool inside = true; 
+            double min_dist = std::numeric_limits<double>::max();
+            for (size_t d = 0; d < dim; ++d) { 
+        
+                double dist; 
+                if (pt[d] < node->mid[d] - node->side[d]) { 
+                    dist = node->mid[d] - node->side[d] - pt[d];
+                    inside = false;
+                } else if (pt[d] > node->mid[d] + node->side[d]) {
+                    dist = pt[d] - node->mid[d] + node->side[d]; 
+                    inside = false;
+                }
+
+                if (dist < min_dist) min_dist = dist; 
+            } 
+
+            if (inside) return 0.0;
+            else return min_dist*min_dist;
+        }
+
+
+        /*
+        void assign_ancestors(Node<Point> *node, Node<Point> **ancestors)
+        {
+
+            node->ancestors = new Node<Point> *[2*dim];
+            for (size_t i = 0; i < 2*dim; ++i) {
+                node->ancestors[i] = ancestors[i];
+            }
+
+            if (node->nodes) {
+
+                Node<Point> **new_ancestors = new Node<Point> *[2*dim];
+
+                for (size_t n = 0; n < nnodes; ++n) { 
+                    if (node->nodes[n]) { 
+                        for (size_t d = 0; d < dim; ++d) { 
+                            if (n & (1 << d)) { 
+                                new_ancestors[2*d] = node;
+                                new_ancestors[2*d+1] = ancestors[2*d+1];
+                            } else { 
+                                new_ancestors[2*d] = ancestors[2*d];
+                                new_ancestors[2*d+1] = node; 
+                            }
+                        }
+
+                        assign_ancestors(node->nodes[n], new_ancestors);
+                    }
+                }
+
+                delete[] new_ancestors;
+            } 
+
+        }
+        */
 };
 
 #endif
