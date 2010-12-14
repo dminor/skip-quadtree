@@ -27,7 +27,7 @@ THE SOFTWARE.
     Compressed Quadtree implementation supporting approximate nearest neighbour
     queries, based upon the description in:  
     
-    Eppstein, D., Goodrich, M. T., Sun, J. Z. (2005) The Skip Quadtree: A Simple Dynamic Data Structure for Multidimensional Data, Proc. 21st ACM Symposium on Computational Geometry, pp. 296 -- 305, ACM, New York, NY
+    Eppstein, D., Goodrich, M. T., Sun, J. Z. (2008) The Skip Quadtree: A Simple Dynamic Data Structure for Multidimensional Data, Int. Journal on Computational Geometry and Applications, 18(1/2), pp. 131 - 160
 */
 
 #include <algorithm>
