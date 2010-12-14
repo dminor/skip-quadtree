@@ -47,8 +47,8 @@ struct Point {
 
 int main(int argc, char **argv)
 { 
-    if (argc < 3) {
-        std::cout << "usage: knn <pts> <queries> [epsilon]" << std::endl;
+    if (argc < 2) {
+        std::cout << "usage: knn <pts> [queries] [epsilon]" << std::endl;
         exit(1);
     }
 
@@ -78,6 +78,11 @@ int main(int argc, char **argv)
     }
 
     ptf.close();
+
+    //build compressed quadtree
+    CompressedQuadtree<Point> cqt(2, pts, pt_count);
+
+    if (argc < 3) return 1;
 
     //read queries
     int q_count;
@@ -111,8 +116,6 @@ int main(int argc, char **argv)
     double epsilon = 0.0;
     if (argc == 4) epsilon = atof(argv[3]);
 
-    //build compressed quadtree
-    CompressedQuadtree<Point> cqt(2, pts, pt_count);
 
     //run queries
     for (int i = 0; i < q_count; ++i) { 

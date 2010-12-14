@@ -1,6 +1,5 @@
-An implementation of the Compressed Quadtree and Skip Quadtree data structures to support approximate nearest neighbour queries as described in the following papers: 
-
-Eppstein, D., Goodrich, M. T., Sun, J. Z. (2005) The Skip Quadtree: A Simple Dynamic Data Structure for Multidimensional Data, Proc. 21st ACM Symposium on Computational Geometry, pp. 296 -- 305, ACM, New York, NY
+An implementation of the Compressed Quadtree and Skip Quadtree data structures to support approximate nearest neighbour searches as described in the following paper: 
 
 Eppstein, D., Goodrich, M. T., Sun, J. Z. (2008) The Skip Quadtree: A Simple Dynamic Data Structure for Multidimensional Data, Int. Journal on Computational Geometry and Applications, 18(1/2), pp. 131 - 160
 
+Performance testing was done on this implementation as part of a Computational Geometry class project which showed that kd-trees (my own implementation, as well the implementation in the ANN library) have much better performance for nearest neighbour searches.  They are also as easy or easier to implement, and good libraries (such as ANN) exist.  The only case where Skip Quadtrees might be of interest for nearest neighbour searches would be if dynamic insertions and deletions are required.

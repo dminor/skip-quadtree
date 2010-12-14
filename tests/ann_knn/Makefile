@@ -1,7 +1,7 @@
 
 INCS = -I
 LIBS = -lann
-CFLAGS = -g
+CFLAGS = -g -O2
 LDFLAGS = -g
 OBJS = knn.o
 TARGET = ../../bin/ann-knn

@@ -94,10 +94,6 @@ template<class Point> class CompressedQuadtree {
             }
 
             root = worker(mid, side, pts_vector);
-//            Node<Point> **ancestors = new Node<Point> *[2*dim]; 
-//            memset(ancestors, 0, 2*dim*sizeof(Node<Point> *));
-//            assign_ancestors(root, ancestors);
-//            delete[] ancestors;
         }
 
         virtual ~CompressedQuadtree()
@@ -117,16 +113,12 @@ template<class Point> class CompressedQuadtree {
             std::vector<NodeDistance<Point> > pq; 
             pq.push_back(NodeDistance<Point>(root, 0.0));
 
-            size_t nvisited = 0;
-
             while (!pq.empty()) {
 
                 std::pop_heap(pq.begin(), pq.end());
                 Node<Point> *node = pq.back().node;
                 double node_dist = pq.back().distance; 
                 pq.pop_back();
-
-                ++nvisited;
 
                 if (node->nodes == 0) {
 
@@ -173,8 +165,6 @@ template<class Point> class CompressedQuadtree {
                     }
                 }
             } 
-
-            std::cout << "#visited: " << nvisited << std::endl;
 
             return qr;
         }
@@ -277,42 +267,6 @@ template<class Point> class CompressedQuadtree {
             if (inside) return 0.0;
             else return min_dist*min_dist;
         }
-
-
-        /*
-        void assign_ancestors(Node<Point> *node, Node<Point> **ancestors)
-        {
-
-            node->ancestors = new Node<Point> *[2*dim];
-            for (size_t i = 0; i < 2*dim; ++i) {
-                node->ancestors[i] = ancestors[i];
-            }
-
-            if (node->nodes) {
-
-                Node<Point> **new_ancestors = new Node<Point> *[2*dim];
-
-                for (size_t n = 0; n < nnodes; ++n) { 
-                    if (node->nodes[n]) { 
-                        for (size_t d = 0; d < dim; ++d) { 
-                            if (n & (1 << d)) { 
-                                new_ancestors[2*d] = node;
-                                new_ancestors[2*d+1] = ancestors[2*d+1];
-                            } else { 
-                                new_ancestors[2*d] = ancestors[2*d];
-                                new_ancestors[2*d+1] = node; 
-                            }
-                        }
-
-                        assign_ancestors(node->nodes[n], new_ancestors);
-                    }
-                }
-
-                delete[] new_ancestors;
-            } 
-
-        }
-        */
 };
 
 #endif

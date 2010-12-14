@@ -50,15 +50,7 @@ void render_tree(FILE *f, struct CompressedQuadtree<Point>::Node<Point> *tree, s
         for (int i = 0; i < 4; ++i) {
             if (tree->nodes[i]) render_tree(f, tree->nodes[i], depth+1);
         } 
-    }
-
-    /*
-    if (depth == 2 && (double)rand()/(double)RAND_MAX < 0.2) { 
-        for (size_t i = 0; i < 4; ++i) {
-            if (tree->ancestors[i]) fprintf(f, "%.0f %.0f %.0f %.0f draw-line\n", tree->mid[0], tree->mid[1], tree->ancestors[i]->mid[0], tree->ancestors[i]->mid[1]); 
-        } 
-    }
-    */
+    } 
 }
 
 int main(int argc, char **argv)

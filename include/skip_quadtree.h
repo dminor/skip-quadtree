@@ -156,16 +156,12 @@ template<class Point> class SkipQuadtree {
 
             ++root->seq;
 
-            size_t nvisited = 0;
-
             while (!pq.empty()) {
 
                 std::pop_heap(pq.begin(), pq.end());
                 Node<Point> *p = pq.back().node;
                 double p_dist = pq.back().distance; 
                 pq.pop_back();
-
-                ++nvisited;
 
                 if (p->nodes == 0) {
 
@@ -237,8 +233,6 @@ template<class Point> class SkipQuadtree {
                     } 
                 }
             } 
-
-            std::cout << "#visited: " << nvisited << std::endl;
 
             return qr;
         }

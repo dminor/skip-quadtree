@@ -1,7 +1,7 @@
 
 INCS = -I../../include 
 LIBS = 
-CFLAGS = -g
+CFLAGS = -g -O2
 LDFLAGS = -L../../bin 
 OBJS = knn.o
 TARGET = ../../bin/cqt-knn

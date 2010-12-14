@@ -1,0 +1,7 @@
+
+To show correctness of an implementation, use either ann-knn or scan-knn as follows
+./ann-knn ../tests/data/pts10000.txt ../tests/data/knn10000.txt > ann
+./cqt-knn ../tests/data/pts10000.txt ../tests/data/knn10000.txt > kdt
+diff kdt ann
+
+If the files match, no output will be shown.
