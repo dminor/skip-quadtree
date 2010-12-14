@@ -1,7 +1,9 @@
-
-To show correctness of an implementation, use either ann-knn or scan-knn as follows
+To show correctness of an implementation, use ann-knn to make a reference file, e.g. 
 ./ann-knn ../tests/data/pts10000.txt ../tests/data/knn10000.txt > ann
-./cqt-knn ../tests/data/pts10000.txt ../tests/data/knn10000.txt > kdt
-diff kdt ann
+./cqt-knn ../tests/data/pts10000.txt ../tests/data/knn10000.txt > cqt
+diff cqt ann
 
 If the files match, no output will be shown.
+
+To time a search, use the built in bash time command, e.g.
+time ./sqt-knn ../tests/data/pts10000.txt ../tests/data/knn10000.txt > /dev/null 
