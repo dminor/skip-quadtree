@@ -7,3 +7,6 @@ If the files match, no output will be shown.
 
 To time a search, use the built in bash time command, e.g.
 time ./sqt-knn ../tests/data/pts10000.txt ../tests/data/knn10000.txt > /dev/null 
+
+To display the generated compressed or skip quadtree, use:
+./sqt-render-tree ../tests/data/pts50.txt tree.ps or ./cqt-render-tree ../tests/data/pts50.txt tree.ps

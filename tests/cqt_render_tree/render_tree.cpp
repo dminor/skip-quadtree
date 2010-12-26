@@ -28,7 +28,7 @@ THE SOFTWARE.
 
 typedef double Point[2];
 
-void render_tree(FILE *f, struct CompressedQuadtree<Point>::Node<Point> *tree, size_t depth)
+void render_tree(FILE *f, struct CompressedQuadtree<Point>::Node *tree, size_t depth)
 {
 
     double x1 = tree->mid[0] - tree->side[0];

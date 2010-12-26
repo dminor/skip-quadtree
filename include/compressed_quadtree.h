@@ -41,21 +41,20 @@ template<class Point> class CompressedQuadtree {
     public:
 
         //Nodes of the quadtree
-        template<class T> struct Node { 
-            Node **nodes;   //children
-//            Node **ancestors;
-            T mid;          //midpoint
-            T side;         //half side length
-            T *pt;           //point, if data stored
+        struct Node { 
+            Node **nodes;       //children
+            Point mid;          //midpoint
+            Point side;         //half side length
+            Point *pt;          //point, if data stored
         };
 
         //Keep track of point and priority for nearest neighbour search
-        template<class T> struct NodeDistance {
+        struct NodeDistance {
 
-            Node<T> *node;
+            Node *node;
             double distance;
 
-            NodeDistance(Node<T> *node, double distance) : node(node), distance(distance) {};
+            NodeDistance(Node *node, double distance) : node(node), distance(distance) {};
 
             //min-heap
             bool operator<(const NodeDistance &other) const
@@ -110,13 +109,13 @@ template<class Point> class CompressedQuadtree {
             }
  
             //initialize priority queue for search
-            std::vector<NodeDistance<Point> > pq; 
-            pq.push_back(NodeDistance<Point>(root, 0.0));
+            std::vector<NodeDistance > pq; 
+            pq.push_back(NodeDistance(root, 0.0));
 
             while (!pq.empty()) {
 
                 std::pop_heap(pq.begin(), pq.end());
-                Node<Point> *node = pq.back().node;
+                Node *node = pq.back().node;
                 double node_dist = pq.back().distance; 
                 pq.pop_back();
 
@@ -158,7 +157,7 @@ template<class Point> class CompressedQuadtree {
 
                             //if closer than k-th distance, search
                             if (min_dist < kth_dist) { 
-                                pq.push_back(NodeDistance<Point>(node->nodes[n], min_dist));
+                                pq.push_back(NodeDistance(node->nodes[n], min_dist));
                                 std::push_heap(pq.begin(), pq.end()); 
                             }
                         } 
@@ -169,16 +168,16 @@ template<class Point> class CompressedQuadtree {
             return qr;
         }
 
-        Node<Point> *root;
+        Node *root;
 
     private:
 
         size_t dim; 
         size_t nnodes;
 
-        Node<Point> *worker(const Point &mid, const Point &side, std::vector<Point *> &pts)
+        Node *worker(const Point &mid, const Point &side, std::vector<Point *> &pts)
         {
-            Node<Point> *node = new Node<Point>; 
+            Node *node = new Node; 
             for (size_t d = 0; d < dim; ++d) {
                 node->mid[d] = mid[d];
                 node->side[d] = side[d]; 
@@ -189,7 +188,7 @@ template<class Point> class CompressedQuadtree {
                 node->pt = pts[0];
             } else { 
 
-                node->nodes = new Node<Point> *[nnodes];
+                node->nodes = new Node *[nnodes];
 
                 //divide points between the nodes 
                 std::vector<Point *> *node_pts = new std::vector<Point *>[nnodes];
@@ -234,7 +233,7 @@ template<class Point> class CompressedQuadtree {
                 if (ninteresting < 2) {
                     for (size_t n = 0; n < nnodes; ++n) {
                         if (node->nodes[n]) {
-                            Node<Point> *temp = node;
+                            Node *temp = node;
                             node = node->nodes[n];
                             delete temp;
                             break;
@@ -246,7 +245,7 @@ template<class Point> class CompressedQuadtree {
             return node;
         } 
 
-        double min_pt_dist_to_node(const Point &pt, Node<Point> *node)
+        double min_pt_dist_to_node(const Point &pt, Node *node)
         {
             bool inside = true; 
             double min_dist = std::numeric_limits<double>::max();

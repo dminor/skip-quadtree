@@ -46,15 +46,15 @@ template<class Point> class SkipQuadtree {
     public:
 
         //Nodes of the quadtree
-        template<class T> struct Node { 
+        struct Node { 
             Node *above;        //pointer to same node in n+1 level of skip structure 
             Node *below;        //pointer to same node in n-1 level of skip structure 
             Node *parent;       //pointer to parent
             Node **ancestors;   //pointers to closest ancestors in each direction
             Node **nodes;       //children
-            T mid;              //midpoint
-            T side;             //half side length
-            T *pt;              //point, if data stored
+            Point mid;              //midpoint
+            Point side;             //half side length
+            Point *pt;              //point, if data stored
 
             size_t seq; 
 
@@ -68,12 +68,12 @@ template<class Point> class SkipQuadtree {
         };
 
         //Keep track of point and priority for nearest neighbour search
-        template<class T> struct NodeDistance {
+        struct NodeDistance {
 
-            Node<T> *node;
+            Node *node;
             double distance;
 
-            NodeDistance(Node<T> *node, double distance) : node(node), distance(distance) {};
+            NodeDistance(Node *node, double distance) : node(node), distance(distance) {};
 
             //min-heap
             bool operator<(const NodeDistance &other) const
@@ -114,8 +114,8 @@ template<class Point> class SkipQuadtree {
             root = worker(mid, side, pts_vector); 
 
             //set ancestor pointers
-            Node<Point> **ancestors = new Node<Point> *[2*dim]; 
-            memset(ancestors, 0, 2*dim*sizeof(Node<Point> *));
+            Node **ancestors = new Node *[2*dim]; 
+            memset(ancestors, 0, 2*dim*sizeof(Node *));
             assign_ancestors(root, ancestors);
             delete[] ancestors;
  
@@ -152,15 +152,15 @@ template<class Point> class SkipQuadtree {
             }
  
             //initialize priority queue for search
-            std::vector<NodeDistance<Point> > pq; 
-            pq.push_back(NodeDistance<Point>(root, min_pt_dist_to_node(pt, root)));
+            std::vector<NodeDistance > pq; 
+            pq.push_back(NodeDistance(root, min_pt_dist_to_node(pt, root)));
 
             ++root->seq;
 
             while (!pq.empty()) {
 
                 std::pop_heap(pq.begin(), pq.end());
-                Node<Point> *p = pq.back().node;
+                Node *p = pq.back().node;
                 double p_dist = pq.back().distance; 
                 pq.pop_back();
 
@@ -196,7 +196,7 @@ template<class Point> class SkipQuadtree {
                     //not sure if this helps too much for k-nn
                     //if (max_pt_dist_to_node(pt, p) <= (1.0 + eps)*p_dist) break;
 
-                    Node<Point> *q = skip_search_equidistant(pt, p, p_dist);
+                    Node *q = skip_search_equidistant(pt, p, p_dist);
 
                     for (size_t n = 0; n < nnodes; ++n) {
                         if (q->ancestors[n] && q->ancestors[n]->seq != knn_seq) { 
@@ -205,7 +205,7 @@ template<class Point> class SkipQuadtree {
                             double min_dist = min_pt_dist_to_node(pt, q->ancestors[n]);
 
                             if (min_dist*(1.0+eps) < kth_dist) { 
-                                pq.push_back(NodeDistance<Point>(q->ancestors[n], min_dist));
+                                pq.push_back(NodeDistance(q->ancestors[n], min_dist));
                                 std::push_heap(pq.begin(), pq.end()); 
                             } 
                         } 
@@ -223,7 +223,7 @@ template<class Point> class SkipQuadtree {
 
                                     double min_dist = min_pt_dist_to_node(pt, q->nodes[n]);
 
-                                    pq.push_back(NodeDistance<Point>(q->nodes[n], min_dist));
+                                    pq.push_back(NodeDistance(q->nodes[n], min_dist));
                                     std::push_heap(pq.begin(), pq.end()); 
                                 }
                             }
@@ -238,8 +238,8 @@ template<class Point> class SkipQuadtree {
             return qr;
         }
 
-        Node<Point> *root; 
-        std::vector<Node<Point> *> levels;
+        Node *root; 
+        std::vector<Node *> levels;
 
         size_t knn_seq;
 
@@ -251,9 +251,9 @@ template<class Point> class SkipQuadtree {
         //
         // Worker function to recursively build compressed quadtree
         // 
-        Node<Point> *worker(const Point &mid, const Point &side, std::vector<Point *> &pts)
+        Node *worker(const Point &mid, const Point &side, std::vector<Point *> &pts)
         {
-            Node<Point> *node = new Node<Point>; 
+            Node *node = new Node; 
 
             for (size_t d = 0; d < dim; ++d) {
                 node->mid[d] = mid[d];
@@ -265,7 +265,7 @@ template<class Point> class SkipQuadtree {
                 node->pt = pts[0];
             } else { 
 
-                node->nodes = new Node<Point> *[nnodes];
+                node->nodes = new Node *[nnodes];
 
                 //divide points between the nodes 
                 std::vector<Point *> *node_pts = new std::vector<Point *>[nnodes];
@@ -282,7 +282,7 @@ template<class Point> class SkipQuadtree {
 
                 //create new nodes recursively
                 size_t ninteresting = 0;
-                Node<Point> *last_interesting = 0;
+                Node *last_interesting = 0;
                 for (size_t n = 0; n < nnodes; ++n) {
 
                     if (node_pts[n].size()) {
@@ -323,17 +323,17 @@ template<class Point> class SkipQuadtree {
         //
         // Recursively assign ancestor pointers
         // 
-        void assign_ancestors(Node<Point> *node, Node<Point> **ancestors)
+        void assign_ancestors(Node *node, Node **ancestors)
         {
 
-            node->ancestors = new Node<Point> *[2*dim];
+            node->ancestors = new Node *[2*dim];
             for (size_t i = 0; i < 2*dim; ++i) {
                 node->ancestors[i] = ancestors[i];
             }
 
             if (node->nodes) {
 
-                Node<Point> **new_ancestors = new Node<Point> *[2*dim];
+                Node **new_ancestors = new Node *[2*dim];
 
                 for (size_t n = 0; n < nnodes; ++n) { 
                     if (node->nodes[n]) { 
@@ -357,7 +357,7 @@ template<class Point> class SkipQuadtree {
         }
 
 
-        void build_skiphierarchy(Node<Point> *level)
+        void build_skiphierarchy(Node *level)
         { 
             //recursively build skip hierarchy until we get an empty level
             //should be O(log(n)) levels w.h.p.
@@ -370,7 +370,7 @@ template<class Point> class SkipQuadtree {
             } 
         }
 
-        bool verify_parents(Node<Point> *node)
+        bool verify_parents(Node *node)
         {
 
             if (node->nodes) { 
@@ -385,7 +385,7 @@ template<class Point> class SkipQuadtree {
             return true;
         }
 
-        bool verify_node_in_level(Node<Point> *root, Node<Point> *node)
+        bool verify_node_in_level(Node *root, Node *node)
         {
             if (root == node) return true;
 
@@ -402,9 +402,9 @@ template<class Point> class SkipQuadtree {
 
         }
 
-        Node<Point> *build_skiplevel(Node<Point> *node)
+        Node *build_skiplevel(Node *node)
         { 
-            Node<Point> *copy = 0; 
+            Node *copy = 0; 
 
             //hit a leaf -- nothing to do
             if (!node->nodes) return 0;
@@ -424,7 +424,7 @@ template<class Point> class SkipQuadtree {
                             if (!copy) copy = make_branchnode(node);
 
                             //create copy of existing point at proper location
-                            copy->nodes[n] = new Node<Point>;
+                            copy->nodes[n] = new Node;
                             copy->nodes[n]->parent = copy;
 
                             //link nodes for skip hierarchy
@@ -440,7 +440,7 @@ template<class Point> class SkipQuadtree {
                         }
                     } else {
                         //build level recursively
-                        Node<Point> *child = build_skiplevel(node->nodes[n]);
+                        Node *child = build_skiplevel(node->nodes[n]);
 
                         //found a valid child, make copy if necessary and set pointer
                         if (child) {
@@ -460,11 +460,11 @@ template<class Point> class SkipQuadtree {
         } 
 
         //make a new branch node and set pointers for skip hierarchy 
-        Node<Point> *make_branchnode(Node<Point> *node)
+        Node *make_branchnode(Node *node)
         { 
             //make new branch node and zero out pointers
-            Node<Point> *copy = new Node<Point>;
-            copy->nodes = new Node<Point> *[nnodes];
+            Node *copy = new Node;
+            copy->nodes = new Node *[nnodes];
             for (size_t n = 0; n < nnodes; ++n) {
                 copy->nodes[n] = 0;
             } 
@@ -485,13 +485,13 @@ template<class Point> class SkipQuadtree {
         //
         // Search for smallest square q inside p that is equidistant to pt
         //
-        Node<Point> *skip_search_equidistant(const Point &pt, Node<Point> *p, double p_dist)
+        Node *skip_search_equidistant(const Point &pt, Node *p, double p_dist)
         {
 
             //find highest point in skip hierarchy containing p, call it q
-            Node<Point> *q_in_q0 = p;
-            Node<Point> *last_q_in_q0 = 0;
-            Node<Point> *q_in_qi = p;
+            Node *q_in_q0 = p;
+            Node *last_q_in_q0 = 0;
+            Node *q_in_qi = p;
 
             while (q_in_qi->above != 0) {
                 q_in_qi = q_in_qi->above;
@@ -560,7 +560,7 @@ template<class Point> class SkipQuadtree {
             return q_in_q0;
         }
 
-        double min_pt_dist_to_node(const Point &pt, Node<Point> *node)
+        double min_pt_dist_to_node(const Point &pt, Node *node)
         {
             bool inside = true; 
             double min_dist = std::numeric_limits<double>::max();
@@ -582,7 +582,7 @@ template<class Point> class SkipQuadtree {
             else return min_dist*min_dist;
         }
 
-        double max_pt_dist_to_node(const Point &pt, Node<Point> *node)
+        double max_pt_dist_to_node(const Point &pt, Node *node)
         { 
             double max_dist = std::numeric_limits<double>::min();
             for (size_t d = 0; d < dim; ++d) { 
