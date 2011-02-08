@@ -27,7 +27,9 @@ THE SOFTWARE.
     Compressed Quadtree implementation supporting approximate nearest neighbour
     queries, based upon the description in:  
     
-    Eppstein, D., Goodrich, M. T., Sun, J. Z. (2008) The Skip Quadtree: A Simple Dynamic Data Structure for Multidimensional Data, Int. Journal on Computational Geometry and Applications, 18(1/2), pp. 131 - 160
+    Eppstein, D., Goodrich, M. T., Sun, J. Z. (2008) The Skip Quadtree:
+    A Simple Dynamic Data Structure for Multidimensional Data,
+    Int. Journal on Computational Geometry and Applications, 18(1/2), pp. 131 - 160
 */
 
 #include <algorithm>
@@ -96,7 +98,8 @@ template<class Point> class CompressedQuadtree {
         }
 
         virtual ~CompressedQuadtree()
-        { 
+        {
+           if (root) delete_worker(root);  
         }
 
         std::vector<std::pair<Point *, double> > knn(size_t k, const Point &pt, double eps) 
@@ -168,6 +171,44 @@ template<class Point> class CompressedQuadtree {
             return qr;
         }
 
+        Node *locate(const Point &pt) 
+        {
+
+            Node *node = 0;
+
+            //see if within bounds covered by the quadtree 
+            bool in_quadtree = true;
+
+            for (size_t d = 0; d < dim; ++d) { 
+                if (root->mid[d] - root->side[d] >= pt[d] || pt[d] >= root->mid[d] + root->side[d]) { 
+                    in_quadtree = false; 
+                    break; 
+                } 
+            }
+
+            //search for node containing the query point 
+            if (in_quadtree) { 
+                node = root; 
+
+                while (node) { 
+                    if (node->nodes) { 
+                        size_t n = 0; 
+                        for (size_t d = 0; d < dim; ++d) { 
+                            if (pt[d] > node->mid[d]) n += 1 << d; 
+                        } 
+
+                        if (node->nodes[n]) node = node->nodes[n]; 
+                        else break;
+
+                    } else { 
+                        break; 
+                    } 
+                } 
+            } 
+
+            return node; 
+        }
+
         Node *root;
 
     private:
@@ -187,8 +228,8 @@ template<class Point> class CompressedQuadtree {
                 node->nodes = 0;
                 node->pt = pts[0];
             } else { 
-
                 node->nodes = new Node *[nnodes];
+                node->pt = 0;
 
                 //divide points between the nodes 
                 std::vector<Point *> *node_pts = new std::vector<Point *>[nnodes];
@@ -266,6 +307,20 @@ template<class Point> class CompressedQuadtree {
             if (inside) return 0.0;
             else return min_dist*min_dist;
         }
+
+        void delete_worker(Node *node)
+        {
+            if (node->nodes) {
+                for (size_t n = 0; n < nnodes; ++n) { 
+                    if (node->nodes[n]) delete_worker(node->nodes[n]); 
+                }
+
+                delete node->nodes;
+            }
+
+            delete node; 
+        }    
+
 };
 
 #endif

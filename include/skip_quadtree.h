@@ -27,8 +27,9 @@ THE SOFTWARE.
     Skip Quadtree implementation supporting approximate nearest neighbour
     queries, based upon the description in:  
 
-    Eppstein, D., Goodrich, M. T., Sun, J. Z. (2008) The Skip Quadtree: A Simple Dynamic Data Structure for Multidimensional Data, Int. Journal on Computational Geometry and Applications, 18(1/2), pp. 131 - 160
-    
+    Eppstein, D., Goodrich, M. T., Sun, J. Z. (2008)
+    The Skip Quadtree: A Simple Dynamic Data Structure for Multidimensional Data,
+    Int. Journal on Computational Geometry and Applications, 18(1/2), pp. 131 - 160 
 */
 
 #include <algorithm>
@@ -129,6 +130,9 @@ template<class Point> class SkipQuadtree {
 
         virtual ~SkipQuadtree()
         { 
+            for(typename std::vector<Node *>::iterator itor = levels.begin(); itor != levels.end(); ++itor) {
+                if (*itor) delete_worker(*itor);
+            }
         }
 
         std::vector<std::pair<Point *, double> > knn(size_t k, const Point &pt, double eps) 
@@ -596,6 +600,21 @@ template<class Point> class SkipQuadtree {
 
             return max_dist*max_dist;
         } 
+
+        void delete_worker(Node *node)
+        {
+            if (node->nodes) {
+                for (size_t n = 0; n < nnodes; ++n) { 
+                    if (node->nodes[n]) delete_worker(node->nodes[n]); 
+                }
+
+                delete node->nodes;
+            }
+
+            delete node->ancestors;
+            delete node; 
+        }    
+
 };
 
 #endif

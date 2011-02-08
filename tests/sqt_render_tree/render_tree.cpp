@@ -46,7 +46,7 @@ void render_tree(FILE *f, struct SkipQuadtree<Point>::Node *tree, size_t depth)
     fprintf(f, "%.0f %.0f %.0f %.0f node-bounds\n", x1, x2, y1, y2); 
 
     if (!tree->nodes) {
-        fprintf(f, "%.0f %.0f draw-point\n", tree->pt[0], tree->pt[1]);
+        fprintf(f, "%.0f %.0f draw-point\n", (*tree->pt)[0], (*tree->pt)[1]);
     } else { 
         for (int i = 0; i < 4; ++i) {
             if (tree->nodes[i]) render_tree(f, tree->nodes[i], depth+1);
