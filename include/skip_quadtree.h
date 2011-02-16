@@ -135,6 +135,48 @@ template<class Point> class SkipQuadtree {
             }
         }
 
+        Node *locate(const Point &pt) 
+        { 
+            Node *node = 0;
+
+            //see if within bounds covered by the quadtree 
+            bool in_quadtree = true;
+
+            for (size_t d = 0; d < dim; ++d) { 
+                if (root->mid[d] - root->side[d] >= pt[d] || pt[d] >= root->mid[d] + root->side[d]) { 
+                    in_quadtree = false; 
+                    break; 
+                } 
+            } 
+
+            //search for node containing the query point 
+            if (in_quadtree) { 
+                node = root; 
+
+                while (node) { 
+                    if (node->nodes) { 
+                        size_t n = 0; 
+
+                        for (size_t d = 0; d < dim; ++d) { 
+                            if (pt[d] > node->mid[d]) n += 1 << d; 
+                        } 
+
+                        if (node->nodes[n]) {
+                            node = node->nodes[n]; 
+                        } else { 
+                            if (node->below) node = node->below; 
+                            else break; 
+                        } 
+                    } else { 
+                        if (node->below) node = node->below; 
+                        else break; 
+                    } 
+                } 
+            } 
+
+            return node; 
+        }
+
         std::vector<std::pair<Point *, double> > knn(size_t k, const Point &pt, double eps) 
         {
 
