@@ -83,13 +83,13 @@ template<class Point> class SkipQuadtree {
             }
         }; 
 
-        SkipQuadtree(size_t dim, Point *pts, size_t n) : dim(dim), nnodes(1 << dim)
+        SkipQuadtree(size_t dim, Point *pts, size_t n) : dim(dim), nnodes(1 << dim), locate_eps(0.001)
         { 
             //calculate bounds
             Point bounds[2];
             for (size_t d = 0; d < dim; ++d) {
                 bounds[0][d] = std::numeric_limits<double>::max(); 
-                bounds[1][d] = std::numeric_limits<double>::min(); 
+                bounds[1][d] = -std::numeric_limits<double>::max(); 
             }
 
             for (size_t d = 0; d < dim; ++d) {
@@ -139,18 +139,8 @@ template<class Point> class SkipQuadtree {
         { 
             Node *node = 0;
 
-            //see if within bounds covered by the quadtree 
-            bool in_quadtree = true;
-
-            for (size_t d = 0; d < dim; ++d) { 
-                if (root->mid[d] - root->side[d] >= pt[d] || pt[d] >= root->mid[d] + root->side[d]) { 
-                    in_quadtree = false; 
-                    break; 
-                } 
-            } 
-
             //search for node containing the query point 
-            if (in_quadtree) { 
+            if (in_node(root, pt)) { 
                 node = root; 
 
                 while (node) { 
@@ -161,7 +151,7 @@ template<class Point> class SkipQuadtree {
                             if (pt[d] > node->mid[d]) n += 1 << d; 
                         } 
 
-                        if (node->nodes[n]) {
+                        if (node->nodes[n] && in_node(node->nodes[n], pt)) {
                             node = node->nodes[n]; 
                         } else { 
                             if (node->below) node = node->below; 
@@ -288,6 +278,7 @@ template<class Point> class SkipQuadtree {
         std::vector<Node *> levels;
 
         size_t knn_seq;
+        double locate_eps;
 
     private:
 
@@ -641,6 +632,20 @@ template<class Point> class SkipQuadtree {
             } 
 
             return max_dist*max_dist;
+        } 
+
+        bool in_node(const Node *node, const Point &pt)
+        {
+            bool in = true;
+
+            for (size_t d = 0; d < dim; ++d) { 
+                if (root->mid[d] - root->side[d] - pt[d] > locate_eps || pt[d] - root->mid[d] - root->side[d] > locate_eps) { 
+                    in = false; 
+                    break; 
+                } 
+            } 
+
+            return in; 
         } 
 
         void delete_worker(Node *node)
