@@ -32,10 +32,10 @@ typedef double Point[2];
 void render_tree(FILE *f, struct SkipQuadtree<Point>::Node *tree, size_t depth)
 {
 
-    double x1 = tree->mid[0] - tree->side[0];
-    double x2 = tree->mid[0] + tree->side[0];
-    double y1 = tree->mid[1] - tree->side[1];
-    double y2 = tree->mid[1] + tree->side[1];
+    double x1 = tree->mid[0] - tree->radius;
+    double x2 = tree->mid[0] + tree->radius;
+    double y1 = tree->mid[1] - tree->radius;
+    double y2 = tree->mid[1] + tree->radius;
 
     //square
     if (depth < 1) fprintf(f, "4 setlinewidth\n");

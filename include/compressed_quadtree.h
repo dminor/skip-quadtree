@@ -34,6 +34,7 @@ THE SOFTWARE.
 
 #include <algorithm>
 #include <limits>
+#include <list>
 #include <vector>
 #include <iostream>
 #include <cstring>
@@ -46,7 +47,7 @@ template<class Point> class CompressedQuadtree {
         struct Node { 
             Node **nodes;       //children
             Point mid;          //midpoint
-            Point side;         //half side length
+            double radius;      //half side length
             Point *pt;          //point, if data stored
         };
 
@@ -83,9 +84,11 @@ template<class Point> class CompressedQuadtree {
  
             //calculate mid point and half side length
             Point mid, side; 
+            double radius = 0;
             for (size_t d = 0; d < dim; ++d) {
                 mid[d] = (bounds[0][d]+bounds[1][d]) / 2;
-                side[d] = (bounds[1][d]-bounds[0][d]) / 2;
+                double side = (bounds[1][d]-bounds[0][d]) / 2;
+                if (side > radius) radius = side;
             } 
 
             //set up points vector 
@@ -94,7 +97,7 @@ template<class Point> class CompressedQuadtree {
                 pts_vector.push_back(&pts[i]);
             }
 
-            root = worker(mid, side, pts_vector);
+            root = worker(mid, radius, pts_vector);
         }
 
         virtual ~CompressedQuadtree()
@@ -102,14 +105,10 @@ template<class Point> class CompressedQuadtree {
            if (root) delete_worker(root);  
         }
 
-        std::vector<std::pair<Point *, double> > knn(size_t k, const Point &pt, double eps) 
+        std::list<std::pair<Point *, double> > knn(size_t k, const Point &pt, double eps) 
         {
             //setup query result vector
-            std::vector<std::pair<Point *, double> > qr; 
-            qr.reserve(k);
-            for (size_t i = 0; i < k; ++i) {
-                qr.push_back(std::make_pair<Point *, double>(0, std::numeric_limits<double>::max()));
-            }
+            std::list<std::pair<Point *, double> > qr; 
  
             //initialize priority queue for search
             std::vector<NodeDistance > pq; 
@@ -122,29 +121,27 @@ template<class Point> class CompressedQuadtree {
                 double node_dist = pq.back().distance; 
                 pq.pop_back();
 
-                if (node->nodes == 0) {
-
+                if (node->nodes == 0) { 
                     //calculate distance from query point to this point
                     double dist = 0.0; 
                     for (size_t d = 0; d < dim; ++d) {
                         dist += ((*node->pt)[d]-pt[d]) * ((*node->pt)[d]-pt[d]); 
                     }
 
-                    //insert point in proper order, for small k this will be fast enough
-                    for (size_t i = 0; i < k; ++i) {
-                        if (qr[i].second > dist) {
-                            for (size_t j = k - 1; j > i; --j) {
-                                qr[j] = qr[j - 1];
-                            }
-                            qr[i].first = node->pt;
-                            qr[i].second = dist;
-                            break; 
-                        }
-                    } 
+                    //insert point in result
+                    typename std::list<std::pair<Point *, double> >::iterator itor = qr.begin();
+                    while (itor != qr.end() && itor->second < dist) {
+                        ++itor;
+                    }
+
+                    qr.insert(itor, std::make_pair<Point *, double>(node->pt, dist)); 
+
+                    if (qr.size() > k) qr.pop_back();
+
                 } else {
 
                     //find k-th distance
-                    double kth_dist = qr[k - 1].second; 
+                    double kth_dist = qr.size() < k? std::numeric_limits<double>::max() : qr.back().second;
 
                     //stop searching, all further nodes farther away than k-th value
                     if (kth_dist <= (1.0 + eps)*node_dist) {
@@ -207,13 +204,13 @@ template<class Point> class CompressedQuadtree {
         size_t dim; 
         size_t nnodes;
 
-        Node *worker(const Point &mid, const Point &side, std::vector<Point *> &pts)
+        Node *worker(const Point &mid, double radius, std::vector<Point *> &pts)
         {
             Node *node = new Node; 
             for (size_t d = 0; d < dim; ++d) {
                 node->mid[d] = mid[d];
-                node->side[d] = side[d]; 
             }
+            node->radius = radius; 
 
             if (pts.size() == 1) {
                 node->nodes = 0;
@@ -242,18 +239,18 @@ template<class Point> class CompressedQuadtree {
                     if (node_pts[n].size()) {
 
                         Point nbounds[2];
-                        Point new_mid, new_side;
+                        Point new_mid;
+                        double new_radius = radius / 2.0;
                         for (size_t d = 0; d < dim; ++d) { 
-                            new_side[d] = side[d] / 2;
                             if (n & (1 << d)) {
-                                new_mid[d] = mid[d] + new_side[d];
+                                new_mid[d] = mid[d] + new_radius;
                             } else { 
-                                new_mid[d] = mid[d] - new_side[d];
+                                new_mid[d] = mid[d] - new_radius;
                             }
                         }
 
                         ++ninteresting;
-                        node->nodes[n] = worker(new_mid, new_side, node_pts[n]);
+                        node->nodes[n] = worker(new_mid, new_radius, node_pts[n]);
                     } else {
                         node->nodes[n] = 0; 
                     }
@@ -284,11 +281,11 @@ template<class Point> class CompressedQuadtree {
             for (size_t d = 0; d < dim; ++d) { 
         
                 double dist; 
-                if (pt[d] < node->mid[d] - node->side[d]) { 
-                    dist = node->mid[d] - node->side[d] - pt[d];
+                if (pt[d] < node->mid[d] - node->radius) { 
+                    dist = node->mid[d] - node->radius - pt[d];
                     inside = false;
-                } else if (pt[d] > node->mid[d] + node->side[d]) {
-                    dist = pt[d] - node->mid[d] + node->side[d]; 
+                } else if (pt[d] > node->mid[d] + node->radius) {
+                    dist = pt[d] - (node->mid[d] + node->radius); 
                     inside = false;
                 }
 
@@ -304,7 +301,7 @@ template<class Point> class CompressedQuadtree {
             bool in = true;
 
             for (size_t d = 0; d < dim; ++d) { 
-                if (root->mid[d] - root->side[d] - pt[d] > locate_eps || pt[d] - root->mid[d] - root->side[d] > locate_eps) { 
+                if (root->mid[d] - root->radius - pt[d] > locate_eps || pt[d] - root->mid[d] - root->radius > locate_eps) { 
                     in = false; 
                     break; 
                 } 

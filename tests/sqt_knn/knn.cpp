@@ -119,11 +119,11 @@ int main(int argc, char **argv)
 
     //run queries
     for (int i = 0; i < q_count; ++i) { 
-        std::vector<std::pair<Point *, double> > qr = sqt.knn(5, queries[i], epsilon);  
+        std::list<std::pair<Point *, double> > qr = sqt.knn(5, queries[i], epsilon);  
         std::cout << "query " << i << ": (" << queries[i][0] << ", " << queries[i][1] << ")" << std::endl;
 
-        for (int j = 0; j < 5; ++j) { 
-            if (qr[j].first) std::cout << "(" << (*qr[j].first)[0] << ", " << (*qr[j].first)[1] << ") " << sqrt(qr[j].second) << std::endl; 
+        for(std::list<std::pair<Point *, double> >::iterator itor = qr.begin(); itor != qr.end(); ++itor) {
+            std::cout << "(" << (*itor->first)[0] << ", " << (*itor->first)[1] << ") " << itor->second << std::endl; 
         } 
     }
 
