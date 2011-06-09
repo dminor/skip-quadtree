@@ -1,5 +1,5 @@
 
-DIRS = ann_knn kdtree_knn cqt_knn sqt_knn cqt_render_tree sqt_render_tree
+DIRS = ann_knn cqt_knn sqt_knn cqt_render_tree sqt_render_tree
 
 all:
 	for dir in $(DIRS); do cd $$dir; make; cd ..; done
